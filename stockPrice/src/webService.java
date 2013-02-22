@@ -2,10 +2,6 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-import javax.swing.text.Document;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-
 import com.mongodb.MongoClient;
 import com.mongodb.MongoException;
 import com.mongodb.WriteConcern;
@@ -17,6 +13,29 @@ import com.mongodb.DBCursor;
 import com.mongodb.ServerAddress;
 
 public class webService {
+	
+	static String prettified;
+    static String[] queryCheckTemp;
+    static String[] queryCheckArray;
+	
+	public static String getStoredDate(String cursorinput){
+		//queryCheck = (cursorinput.next()).toString();
+    	queryCheckTemp = cursorinput.split(",");
+    	queryCheckArray = queryCheckTemp[7].split(" : ");
+    	queryCheckArray[1] = queryCheckArray[1].replace("\"","");
+    	queryCheckArray[1] = queryCheckArray[1].trim();
+		return queryCheckArray[1];
+	}
+	
+	public static String Prettify(String input){
+		prettified = input;
+		prettified = prettified.substring(0,prettified.length()-1);
+		prettified = prettified.replace("\"","");
+		prettified = prettified.replace(" : ",":");
+		prettified = prettified.replace(" ,",",");
+		prettified = prettified.trim();
+		return prettified;
+	}
 	/**
 	 * @param args
 	 * @throws IOException 
@@ -27,19 +46,19 @@ public class webService {
     	//Reference:http://www.gummy-stuff.org/Yahoo-data.htm
     	String[] fieldNames = {"initials","name","price","volume","dlow","dhigh","date","prevdate"};
     	
-    	String[] coNames;
-    	String[] site;
-    	site = new String[10];
+    	String[] coNames = new String[10];
+    	String[] site = new String[10];
     	//String[] searchResult;
     	
-    	Scanner userInput = new Scanner(System.in);
-    	System.out.print("Type company:");
+    	Scanner userInput = new Scanner(System.in).useDelimiter("\\n");
+    	System.out.print("Type company (max. 10):");
     	String input = userInput.next();
     	userInput.close();
+    	System.out.println("input:"+input);
     	coNames = input.split(",");
     	for(int k = 0; k < coNames.length; k++){
+    		coNames[k] = coNames[k].replaceAll("\\W","");
     		coNames[k] = coNames[k].replaceAll("\\s", "").toUpperCase();
-    		
     		//symbol,name,price,volume,day's low, day's high,trade date,last trade date
         	site[k] = presite+coNames[k]+"&f=snl1vghd1d2";
         	//System.out.println("You want to go to: " + site[k]);
@@ -77,9 +96,9 @@ public class webService {
 	    BasicDBObject doc;
 	    
 	    String queryCheck;
-	    String[] queryCheckTemp;
-	    String[] queryCheckArray;
-	    
+	    /*String[] queryCheckTemp;
+	    String[] queryCheckArray;*/
+	    String lastStoredDate;
 	    String output;
 	    String[] outputTemp;
 	    
@@ -104,25 +123,38 @@ public class webService {
 	            if(queryCursor.hasNext()) {
 	            	//System.out.println("checking for duplicates...");
 	            	queryCheck = (queryCursor.next()).toString();
-	            	queryCheckTemp = queryCheck.split(",");
+	            	/*queryCheckTemp = queryCheck.split(",");
 	            	queryCheckArray = queryCheckTemp[7].split(" : ");
 	            	queryCheckArray[1] = queryCheckArray[1].replace("\"","");
 	            	queryCheckArray[1] = queryCheckArray[1].trim();
-	            	if(queryCheckArray[1].equals(inputArray[6])){
+	            	if(queryCheckArray[1].equals(inputArray[6])){*/
+	            	lastStoredDate = getStoredDate(queryCheck);
+	            	if(lastStoredDate.equals(inputArray[6])){
 	            		//System.out.println("Duplicate exists");
 	            		outputTemp = queryCheck.split("} , ");
+	            		output = Prettify(outputTemp[1]);
+	            		/*
 	            		output = outputTemp[1];
+	            		output = output.substring(0,output.length()-1);
 	            		output = output.replace("\"","");
-	            		output = output.trim();
+	            		output = output.replace(" ","");
+	            		output = output.replace(",",", ");
+	            		output = output.trim();*/
 	            		System.out.println(output);
 	            	} else {
-	            		System.out.println("Updating...");
+	            		System.out.println("Database information out of date. Updating...");
 	            		coll.remove(query);
 	            		doc = new BasicDBObject("initials",inputArray[0]);
 		            	for(int j = 1; j < fieldNames.length; j++){
 								doc.append(fieldNames[j], inputArray[j]);
 		            	}
 		            	coll.insert(doc);
+		            	queryCursor = coll.find(query);
+		            	if(queryCursor.hasNext()){
+		            		outputTemp = queryCheck.split("} , ");
+		            		output = Prettify(outputTemp[1]);
+		            		System.out.println(output);
+		            	}
 	            	}
 	            }else{
 	            	doc = new BasicDBObject("initials",inputArray[0]);
@@ -130,6 +162,13 @@ public class webService {
 							doc.append(fieldNames[j], inputArray[j]);
 	            	}
 	            	coll.insert(doc);
+	            	queryCursor = coll.find(query);
+	            	if(queryCursor.hasNext()){
+	            		queryCheck = (queryCursor.next()).toString();
+	            		outputTemp = queryCheck.split("} , ");
+	            		output = Prettify(outputTemp[1]);
+	            		System.out.println(output);
+	            	}
 	            }
 	            queryCursor.close();
 	        }
@@ -148,15 +187,7 @@ public class webService {
 	        in.close();
 	    }
     	
- //   	URL myURL = new URL(site);
- //   	DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
- //   	DocumentBuilder db = dbf.newDocumentBuilder();
- //   	Document doc = db.parse(new InputSource(myURL.openStream());
- //   	doc.getDocumentElement().normalize();
-        
-        
         //<span id="yfs_l84_goog">792.89</span>
-
 
 	}
 

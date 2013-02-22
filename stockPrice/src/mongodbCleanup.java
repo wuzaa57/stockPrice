@@ -50,8 +50,8 @@ public class mongodbCleanup {
 	    
 	    
 	    
-	    DBObject doc = coll.findOne();
-        coll.remove(doc);
+	    //DBObject doc = coll.findOne();
+        //coll.remove(doc);
         
         
 	    System.out.println("ending");
