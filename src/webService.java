@@ -14,7 +14,7 @@ import com.mongodb.ServerAddress;
 
 public class webService {
 	
-	static String[] fieldNames = {"initials","name","price","volume","dlow","dhigh","date","prevdate"};
+	static String[] fieldNames = {"initials","name","price","volume","dlow","dhigh","lastdate","movavg(50days)"};
 	
 	public static String[] promptUser(){
 		String[] userinputs;
@@ -38,10 +38,10 @@ public class webService {
 	
 	public static String[] getSites(String[] userinputs){
 		String presite = "http://finance.yahoo.com/d/quotes.csv?s=";
-		
+		//Reference:http://www.gummy-stuff.org/Yahoo-data.htm
 		for(int k = 0; k < userinputs.length; k++){
 			//symbol,name,price,volume,day's low, day's high,trade date,last trade date
-			userinputs[k] = presite+userinputs[k]+"&f=snl1vghd1d2";
+			userinputs[k] = presite+userinputs[k]+"&f=snl1vghd1m3";
 		}
 		return userinputs;
 	}
@@ -59,14 +59,8 @@ public class webService {
         String[] inputArray;
         BasicDBObject query;
 	    DBCursor queryCursor;
-	    BasicDBObject doc;
-	    
 	    String queryCheck;
-	    /*String[] queryCheckTemp;
-	    String[] queryCheckArray;*/
 	    String lastStoredDate;
-	    String output;
-	    String[] outputTemp;
 	    
 	    for(int b = 0; b < coNames.length; b++){
 	    	//System.out.println("Site: "+site[b]);
@@ -92,37 +86,14 @@ public class webService {
 	            	lastStoredDate = getStoredDate(queryCheck);
 	            	if(lastStoredDate.equals(inputArray[6])){
 	            		//System.out.println("Duplicate exists");
-	            		outputTemp = queryCheck.split("} , ");
-	            		output = Prettify(outputTemp[1]);
-	            		System.out.println(output);
+	            		printResult(queryCheck);
 	            	} else {
 	            		System.out.println("Database information out of date. Updating...");
 	            		coll.remove(query);
-	            		doc = new BasicDBObject("initials",inputArray[0]);
-		            	for(int j = 1; j < fieldNames.length; j++){
-								doc.append(fieldNames[j], inputArray[j]);
-		            	}
-		            	coll.insert(doc);
-		            	queryCursor = coll.find(query);
-		            	if(queryCursor.hasNext()){
-		            		outputTemp = queryCheck.split("} , ");
-		            		output = Prettify(outputTemp[1]);
-		            		System.out.println(output);
-		            	}
+	            		editDB(coll, inputArray);
 	            	}
 	            }else{
-	            	doc = new BasicDBObject("initials",inputArray[0]);
-	            	for(int j = 1; j < fieldNames.length; j++){
-							doc.append(fieldNames[j], inputArray[j]);
-	            	}
-	            	coll.insert(doc);
-	            	queryCursor = coll.find(query);
-	            	if(queryCursor.hasNext()){
-	            		queryCheck = (queryCursor.next()).toString();
-	            		outputTemp = queryCheck.split("} , ");
-	            		output = Prettify(outputTemp[1]);
-	            		System.out.println(output);
-	            	}
+	            	editDB(coll, inputArray);
 	            }
 	            queryCursor.close();
 	        }
@@ -140,6 +111,31 @@ public class webService {
 	        
 	        in.close();
 	    }
+	}
+	
+	public static void printResult(String queryCheck){
+		String output;
+	    String[] outputTemp;
+		outputTemp = queryCheck.split("} , ");
+		output = Prettify(outputTemp[1]);
+		System.out.println(output);
+	}
+	
+	public static void editDB(DBCollection coll, String[] inputArray){
+		String queryCheck;
+	    DBCursor queryCursor;
+	    String output;
+	    String[] outputTemp;
+	    BasicDBObject doc = new BasicDBObject("initials",inputArray[0]);
+    	for(int j = 1; j < fieldNames.length; j++){
+				doc.append(fieldNames[j], inputArray[j]);
+    	}
+    	coll.insert(doc);
+    	queryCursor = coll.find(doc);
+    	if(queryCursor.hasNext()){
+    		queryCheck = (queryCursor.next()).toString();
+    		printResult(queryCheck);
+    	}
 	}
 	
 	public static String getStoredDate(String cursorinput){
@@ -165,7 +161,6 @@ public class webService {
 	}
 	
 	public static void main(String[] args) throws IOException {
-    	//Reference:http://www.gummy-stuff.org/Yahoo-data.htm
 		String[] userinputs = promptUser();
 		String[] coNames = getCoNames(userinputs);
 		String[] site = getSites(userinputs);
